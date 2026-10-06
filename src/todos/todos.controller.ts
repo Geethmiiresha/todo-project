@@ -11,6 +11,15 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiCreatedResponse,
+  ApiNotFoundResponse,
+  ApiBadRequestResponse,
+  ApiOkResponse,
+  ApiTags,
+  ApiUnauthorizedResponse,
+} from '@nestjs/swagger';
 import type { AuthUser } from '../auth/auth-user.interface';
 import { AuthGuard } from '../auth/auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
@@ -21,6 +30,10 @@ import { TodosService } from './todos.service';
 
 @UseGuards(AuthGuard)
 @Controller('todos')
+@ApiTags('Todos')
+@ApiBearerAuth()
+@ApiUnauthorizedResponse({ description: 'A valid bearer access token is required.' })
+@ApiBadRequestResponse({ description: 'Request validation failed.' })
 export class TodosController {
   constructor(private readonly todosService: TodosService) {}
 
@@ -30,6 +43,7 @@ export class TodosController {
   }
 
   @Get()
+  @ApiOkResponse({ description: 'Todos scoped to the authenticated user, with pagination metadata.' })
   findAll(
     @CurrentUser() user: AuthUser,
     @Query() query: QueryTodoDto,
@@ -53,11 +67,13 @@ export class TodosController {
   }
 
   @Post()
+  @ApiCreatedResponse({ description: 'Todo created for the authenticated user.' })
   create(@Body() dto: CreateTodoDto, @CurrentUser() user: AuthUser) {
     return this.todosService.create(user.id, dto);
   }
 
   @Patch(':id')
+  @ApiNotFoundResponse({ description: 'Todo does not exist or belongs to another user.' })
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateTodoDto,
@@ -67,6 +83,7 @@ export class TodosController {
   }
 
   @Delete(':id')
+  @ApiNotFoundResponse({ description: 'Todo does not exist or belongs to another user.' })
   @HttpCode(204)
   remove(
     @Param('id', ParseUUIDPipe) id: string,

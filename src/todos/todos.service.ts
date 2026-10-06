@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { TagsService } from '../tags/tags.service';
 import { CreateTodoDto } from './dto/create-todo.dto';
 import {
   QueryTodoDto,
@@ -32,6 +33,7 @@ export class TodosService {
   constructor(
     @InjectRepository(Todo)
     private readonly todosRepository: Repository<Todo>,
+    private readonly tagsService: TagsService,
   ) {}
 
   async findAll(
@@ -43,6 +45,8 @@ export class TodosService {
 
     const qb = this.todosRepository
       .createQueryBuilder('todo')
+      .leftJoinAndSelect('todo.category', 'category')
+      .leftJoinAndSelect('todo.tags', 'tags')
       .where('todo.userId = :userId', { userId });
 
     if (query.search && query.search.trim()) {
@@ -60,6 +64,19 @@ export class TodosService {
 
     if (query.priority) {
       qb.andWhere('todo.priority = :priority', { priority: query.priority });
+    }
+
+    if (query.categoryId) {
+      qb.andWhere('todo.categoryId = :categoryId', {
+        categoryId: query.categoryId,
+      });
+    }
+
+    if (query.tagId) {
+      qb.andWhere(
+        'EXISTS (SELECT 1 FROM todo_tags tt WHERE tt.todo_id = todo.id AND tt.tag_id = :filterTagId)',
+        { filterTagId: query.tagId },
+      );
     }
 
     const sortOrder = query.sortOrder === SortOrder.ASC ? 'ASC' : 'DESC';
@@ -122,23 +139,33 @@ export class TodosService {
     };
   }
 
-  // Wena user kenekge todo ekak nam 404 (eka thiyenawa kiyala hint ekak denne na)
   async findOne(id: string, userId: string): Promise<Todo> {
-    const todo = await this.todosRepository.findOneBy({ id, userId });
+    const todo = await this.todosRepository.findOne({
+      where: { id, userId },
+      relations: { category: true, tags: true },
+    });
     if (!todo) throw new NotFoundException(`Todo ${id} not found`);
     return todo;
   }
 
-  create(userId: string, dto: CreateTodoDto): Promise<Todo> {
+  async create(userId: string, dto: CreateTodoDto): Promise<Todo> {
+    const tags =
+      dto.tagIds && dto.tagIds.length > 0
+        ? await this.tagsService.findByIds(dto.tagIds, userId)
+        : [];
+
     const todo = this.todosRepository.create({
       title: dto.title,
       description: dto.description?.trim() ?? '',
       completed: dto.completed ?? false,
       priority: dto.priority ?? TodoPriority.MEDIUM,
       dueDate: dto.dueDate ? new Date(dto.dueDate) : null,
+      categoryId: dto.categoryId ?? null,
+      tags,
       userId,
     });
-    return this.todosRepository.save(todo);
+    const saved = await this.todosRepository.save(todo);
+    return this.findOne(saved.id, userId);
   }
 
   async update(id: string, userId: string, dto: UpdateTodoDto): Promise<Todo> {
@@ -150,7 +177,14 @@ export class TodosService {
     if (dto.dueDate !== undefined) {
       todo.dueDate = dto.dueDate ? new Date(dto.dueDate) : null;
     }
-    return this.todosRepository.save(todo);
+    if (dto.categoryId !== undefined) {
+      todo.categoryId = dto.categoryId;
+    }
+    if (dto.tagIds !== undefined) {
+      todo.tags = await this.tagsService.findByIds(dto.tagIds, userId);
+    }
+    await this.todosRepository.save(todo);
+    return this.findOne(todo.id, userId);
   }
 
   async remove(id: string, userId: string): Promise<void> {

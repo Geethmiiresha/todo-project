@@ -1,23 +1,27 @@
 import type { Request } from 'express';
+import { UserRole } from '../users/entities/user.entity';
 
-/** Token eken ganna logged-in user */
 export interface AuthUser {
   id: string;
   email: string;
+  role: UserRole;
+  isActive: boolean;
 }
 
 export interface AuthenticatedRequest extends Request {
   user: AuthUser;
 }
 
-/** API response walata yana user (password nethuwa) */
 export interface UserProfile {
   id: string;
   name: string;
   email: string;
+  role: UserRole;
+  isActive: boolean;
 }
 
 export interface AuthResponse {
   accessToken: string;
+  refreshToken: string;
   user: UserProfile;
 }

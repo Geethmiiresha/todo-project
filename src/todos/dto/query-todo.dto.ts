@@ -4,6 +4,7 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  IsUUID,
   Max,
   Min,
 } from 'class-validator';
@@ -55,6 +56,14 @@ export class QueryTodoDto {
   @IsOptional()
   @IsEnum(TodoPriority)
   priority?: TodoPriority;
+
+  @IsOptional()
+  @IsUUID()
+  categoryId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  tagId?: string;
 
   @IsOptional()
   @Transform(({ value }) => {
