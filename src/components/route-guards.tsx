@@ -18,7 +18,17 @@ export function ProtectedRoute() {
   return user ? <Outlet /> : <Navigate to="/login" replace />
 }
 
-/** Login / Register pages: already logged-in users go to the Todos page. */
+/** Only for ADMIN users. Non-admins go to /. */
+export function AdminRoute() {
+  const { user, isLoading } = useAuth()
+
+  if (isLoading) return <FullPageMessage>Checking your session…</FullPageMessage>
+  if (!user) return <Navigate to="/login" replace />
+  if (user.role !== "ADMIN") return <Navigate to="/" replace />
+  return <Outlet />
+}
+
+/** Login / Register / Forgot / Reset pages: already logged-in users go to the Todos page. */
 export function PublicOnlyRoute() {
   const { user, isLoading } = useAuth()
 

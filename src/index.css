@@ -1,9 +1,10 @@
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --radius: 0.75rem;
-  --background: #eef1f6;
-  --foreground: #0f1b2d;
+  --radius: 0.875rem;
+  --background: #f1f4fa;
+  --foreground: #101c30;
   --card: #ffffff;
   --card-foreground: #0f1b2d;
   --primary: #3b34d8;
@@ -15,9 +16,30 @@
   --accent: #ffd23f;
   --accent-foreground: #0f1b2d;
   --destructive: #c8281c;
-  --border: #d5dce8;
-  --input: #c3cddd;
+  --border: #dbe2ef;
+  --input: #cbd5e4;
   --ring: #3b34d8;
+  color-scheme: light;
+}
+
+.dark {
+  --background: #0b1220;
+  --foreground: #edf2fb;
+  --card: #141e2e;
+  --card-foreground: #edf2fb;
+  --primary: #9b96ff;
+  --primary-foreground: #111426;
+  --secondary: #202c3e;
+  --secondary-foreground: #e5ecf8;
+  --muted: #1b2738;
+  --muted-foreground: #a3b0c4;
+  --accent: #ffd85a;
+  --accent-foreground: #18202a;
+  --destructive: #ff7169;
+  --border: #2c394d;
+  --input: #3b4a60;
+  --ring: #a8a3ff;
+  color-scheme: dark;
 }
 
 @theme inline {
@@ -50,5 +72,46 @@
   }
   body {
     @apply bg-background text-foreground font-sans antialiased;
+    background-image:
+      radial-gradient(ellipse at 12% 8%, rgb(79 70 229 / 7%), transparent 32rem),
+      radial-gradient(ellipse at 88% 82%, rgb(255 210 63 / 8%), transparent 28rem);
+    background-attachment: fixed;
+    transition: background-color 200ms ease, color 200ms ease;
+  }
+
+  .dark body {
+    background-image:
+      radial-gradient(ellipse at 12% 8%, rgb(99 91 255 / 13%), transparent 32rem),
+      radial-gradient(ellipse at 88% 82%, rgb(255 210 63 / 5%), transparent 28rem);
+  }
+
+  button,
+  a,
+  input,
+  textarea,
+  select {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+@layer components {
+  .surface-card {
+    @apply rounded-2xl border border-border/80 bg-card/95 shadow-[0_18px_50px_-30px_rgba(16,28,48,0.28)] backdrop-blur-sm;
+  }
+
+  .surface-toolbar {
+    @apply rounded-2xl border border-border/80 bg-card/75 shadow-sm backdrop-blur-md;
+  }
+
+  .eyebrow {
+    @apply text-[0.68rem] font-bold uppercase tracking-[0.18em] text-primary;
+  }
+
+  .dark .surface-card {
+    box-shadow: 0 18px 50px -30px rgb(0 0 0 / 75%);
+  }
+
+  .dark .surface-toolbar {
+    box-shadow: 0 8px 30px -24px rgb(0 0 0 / 80%);
   }
 }

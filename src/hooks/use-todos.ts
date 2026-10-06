@@ -30,6 +30,8 @@ export interface UseTodosResult {
   search: string
   filter: TodoFilter
   priorityFilter: TodoPriority | "ALL"
+  categoryId: string | null
+  tagId: string | null
   sortBy: TodoSortBy
   sortOrder: SortOrder
   page: number
@@ -39,6 +41,8 @@ export interface UseTodosResult {
   setSearch: (search: string) => void
   setFilter: (filter: TodoFilter) => void
   setPriorityFilter: (priority: TodoPriority | "ALL") => void
+  setCategoryId: (id: string | null) => void
+  setTagId: (id: string | null) => void
   setSortBy: (sortBy: TodoSortBy) => void
   setSortOrder: (order: SortOrder) => void
   toggleSortOrder: () => void
@@ -85,6 +89,8 @@ export function useTodos(): UseTodosResult {
   const [debouncedSearch, setDebouncedSearch] = useState<string>("")
   const [filter, setFilterState] = useState<TodoFilter>("all")
   const [priorityFilter, setPriorityFilterState] = useState<TodoPriority | "ALL">("ALL")
+  const [categoryId, setCategoryIdState] = useState<string | null>(null)
+  const [tagId, setTagIdState] = useState<string | null>(null)
   const [sortBy, setSortByState] = useState<TodoSortBy>("createdAt")
   const [sortOrder, setSortOrderState] = useState<SortOrder>("DESC")
   const [page, setPageState] = useState<number>(1)
@@ -121,6 +127,16 @@ export function useTodos(): UseTodosResult {
     setPageState(1)
   }, [])
 
+  const setCategoryId = useCallback((val: string | null) => {
+    setCategoryIdState(val)
+    setPageState(1)
+  }, [])
+
+  const setTagId = useCallback((val: string | null) => {
+    setTagIdState(val)
+    setPageState(1)
+  }, [])
+
   const setSortBy = useCallback((val: TodoSortBy) => {
     setSortByState(val)
     setPageState(1)
@@ -150,6 +166,8 @@ export function useTodos(): UseTodosResult {
     setDebouncedSearch("")
     setFilterState("all")
     setPriorityFilterState("ALL")
+    setCategoryIdState(null)
+    setTagIdState(null)
     setSortByState("createdAt")
     setSortOrderState("DESC")
     setPageState(1)
@@ -166,6 +184,8 @@ export function useTodos(): UseTodosResult {
           search: debouncedSearch.trim() || undefined,
           status: filter,
           priority: priorityFilter === "ALL" ? undefined : priorityFilter,
+          categoryId: categoryId || undefined,
+          tagId: tagId || undefined,
           sortBy,
           sortOrder,
         }),
@@ -182,7 +202,7 @@ export function useTodos(): UseTodosResult {
       setLoadError(getErrorMessage(error, "Could not load your tasks."))
       setStatus("error")
     }
-  }, [page, limit, debouncedSearch, filter, priorityFilter, sortBy, sortOrder])
+  }, [page, limit, debouncedSearch, filter, priorityFilter, categoryId, tagId, sortBy, sortOrder])
 
   useEffect(() => {
     void load()
@@ -215,7 +235,7 @@ export function useTodos(): UseTodosResult {
       const updatedSummary = await todoApi.summary()
       if (isMounted.current) setSummary(updatedSummary)
     } catch {
-      // ignore non-critical summary fetch error
+      // ignore
     }
   }
 
@@ -240,7 +260,6 @@ export function useTodos(): UseTodosResult {
 
     return runForTodo(id, "Could not update the task. Try again.", async () => {
       const updated = await todoApi.update(id, { completed: !current.completed })
-      // If filtering active or completed, refreshing list keeps it accurate
       if (filter !== "all") {
         await load()
       } else {
@@ -254,8 +273,13 @@ export function useTodos(): UseTodosResult {
     runForTodo(id, "Could not save your changes. Try again.", async () => {
       const updated = await todoApi.update(id, draft)
       setTodos((prev) => prev.map((t) => (t.id === updated.id ? updated : t)))
-      // If priority or title changed and we're sorting by it, reloading reflects new order
-      if (sortBy === "title" || sortBy === "priority" || sortBy === "dueDate") {
+      if (
+        sortBy === "title" ||
+        sortBy === "priority" ||
+        sortBy === "dueDate" ||
+        categoryId ||
+        tagId
+      ) {
         await load()
       } else {
         void refreshSummary()
@@ -265,7 +289,6 @@ export function useTodos(): UseTodosResult {
   const deleteTodo = async (id: string): Promise<boolean> =>
     runForTodo(id, "Could not delete the task. Try again.", async () => {
       await todoApi.remove(id)
-      // If we are deleting the last item on a page > 1, step back one page
       if (todos.length === 1 && page > 1) {
         setPageState((p) => p - 1)
       } else {
@@ -303,6 +326,8 @@ export function useTodos(): UseTodosResult {
     search,
     filter,
     priorityFilter,
+    categoryId,
+    tagId,
     sortBy,
     sortOrder,
     page,
@@ -311,6 +336,8 @@ export function useTodos(): UseTodosResult {
     setSearch,
     setFilter,
     setPriorityFilter,
+    setCategoryId,
+    setTagId,
     setSortBy,
     setSortOrder,
     toggleSortOrder,

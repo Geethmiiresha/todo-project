@@ -5,7 +5,9 @@ import {
   Check,
   Clock,
   Flag,
+  Folder,
   Pencil,
+  Tag as TagIcon,
   Trash2,
   X,
 } from "lucide-react"
@@ -20,10 +22,14 @@ import { Textarea } from "@/components/ui/textarea"
 import { formatDateForInput, formatDueDate, isDueToday, isOverdue } from "@/lib/date"
 import { cn } from "@/lib/utils"
 import { validateTitle } from "@/lib/validation"
+import type { Category } from "@/types/category"
+import type { Tag } from "@/types/tag"
 import type { Todo, TodoDraft, TodoPriority } from "@/types/todo"
 
 interface TodoItemProps {
   todo: Todo
+  categories?: Category[]
+  tags?: Tag[]
   /** A request for this todo is in progress */
   isBusy: boolean
   onToggle: (id: string) => void
@@ -38,23 +44,38 @@ const PRIORITIES: { value: TodoPriority; label: string; activeClass: string }[] 
   { value: "HIGH", label: "High", activeClass: "border-rose-500 bg-rose-500/15 text-rose-700 dark:text-rose-300 font-semibold" },
 ]
 
-export function TodoItem({ todo, isBusy, onToggle, onUpdate, onDelete }: TodoItemProps) {
+export function TodoItem({
+  todo,
+  categories = [],
+  tags = [],
+  isBusy,
+  onToggle,
+  onUpdate,
+  onDelete,
+}: TodoItemProps) {
   const [isEditing, setIsEditing] = useState<boolean>(false)
   const [title, setTitle] = useState<string>(todo.title)
   const [description, setDescription] = useState<string>(todo.description)
   const [priority, setPriority] = useState<TodoPriority>(todo.priority ?? "MEDIUM")
   const [dueDate, setDueDate] = useState<string>(formatDateForInput(todo.dueDate))
+  const [categoryId, setCategoryId] = useState<string>(todo.categoryId ?? "")
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>(
+    todo.tags?.map((t) => t.id) ?? [],
+  )
   const [error, setError] = useState<string | null>(null)
 
   const checkboxId = useId()
   const errorId = useId()
   const editDueDateId = useId()
+  const editCatId = useId()
 
   const startEditing = () => {
     setTitle(todo.title)
     setDescription(todo.description)
     setPriority(todo.priority ?? "MEDIUM")
     setDueDate(formatDateForInput(todo.dueDate))
+    setCategoryId(todo.categoryId ?? "")
+    setSelectedTagIds(todo.tags?.map((t) => t.id) ?? [])
     setError(null)
     setIsEditing(true)
   }
@@ -62,6 +83,12 @@ export function TodoItem({ todo, isBusy, onToggle, onUpdate, onDelete }: TodoIte
   const cancelEditing = () => {
     setIsEditing(false)
     setError(null)
+  }
+
+  const toggleTag = (id: string) => {
+    setSelectedTagIds((prev) =>
+      prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id],
+    )
   }
 
   const handleSave = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -77,16 +104,16 @@ export function TodoItem({ todo, isBusy, onToggle, onUpdate, onDelete }: TodoIte
       description: description.trim(),
       priority,
       dueDate: dueDate ? new Date(`${dueDate}T00:00:00`).toISOString() : null,
+      categoryId: categoryId || null,
+      tagIds: selectedTagIds,
     })
 
-    // Stay in edit mode if saving failed so the changes are not lost
     if (saved) setIsEditing(false)
   }
 
   const overdue = !todo.completed && isOverdue(todo.dueDate)
   const dueToday = !todo.completed && isDueToday(todo.dueDate)
 
-  // Rail color: overdue -> red, completed -> muted input, regular -> primary
   const rail = cn(
     "border-l-4 transition-colors",
     todo.completed
@@ -128,31 +155,26 @@ export function TodoItem({ todo, isBusy, onToggle, onUpdate, onDelete }: TodoIte
             onChange={(e) => setDescription(e.target.value)}
           />
 
+          {/* Edit Category & Tags */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
-              <Label className="flex items-center gap-1 text-xs text-muted-foreground">
-                <Flag className="size-3" /> Priority
+              <Label htmlFor={editCatId} className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Folder className="size-3" /> Category
               </Label>
-              <div role="radiogroup" aria-label="Priority" className="grid grid-cols-3 gap-1">
-                {PRIORITIES.map(({ value, label, activeClass }) => (
-                  <button
-                    key={value}
-                    type="button"
-                    role="radio"
-                    aria-checked={priority === value}
-                    disabled={isBusy}
-                    onClick={() => setPriority(value)}
-                    className={cn(
-                      "inline-flex h-7 items-center justify-center rounded-md border text-xs font-medium transition-colors cursor-pointer disabled:cursor-not-allowed",
-                      priority === value
-                        ? activeClass
-                        : "border-border bg-card hover:bg-muted text-muted-foreground",
-                    )}
-                  >
-                    {label}
-                  </button>
+              <select
+                id={editCatId}
+                value={categoryId}
+                disabled={isBusy}
+                onChange={(e) => setCategoryId(e.target.value)}
+                className="h-7 rounded-md border border-input bg-card px-2 text-xs text-foreground"
+              >
+                <option value="">No category</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
                 ))}
-              </div>
+              </select>
             </div>
 
             <div className="flex flex-col gap-1.5">
@@ -178,6 +200,62 @@ export function TodoItem({ todo, isBusy, onToggle, onUpdate, onDelete }: TodoIte
                 className="h-7 text-xs"
                 onChange={(e) => setDueDate(e.target.value)}
               />
+            </div>
+          </div>
+
+          {/* Edit Tags */}
+          {tags.length > 0 && (
+            <div className="flex flex-col gap-1.5">
+              <Label className="flex items-center gap-1 text-xs text-muted-foreground">
+                <TagIcon className="size-3" /> Tags
+              </Label>
+              <div className="flex flex-wrap gap-1">
+                {tags.map((t) => {
+                  const isSelected = selectedTagIds.includes(t.id)
+                  return (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => toggleTag(t.id)}
+                      className={cn(
+                        "inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium transition-colors cursor-pointer",
+                        isSelected
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-border bg-card text-muted-foreground hover:bg-muted",
+                      )}
+                    >
+                      #{t.name}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Edit Priority */}
+          <div className="flex flex-col gap-1.5">
+            <Label className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Flag className="size-3" /> Priority
+            </Label>
+            <div role="radiogroup" aria-label="Priority" className="grid grid-cols-3 gap-1">
+              {PRIORITIES.map(({ value, label, activeClass }) => (
+                <button
+                  key={value}
+                  type="button"
+                  role="radio"
+                  aria-checked={priority === value}
+                  disabled={isBusy}
+                  onClick={() => setPriority(value)}
+                  className={cn(
+                    "inline-flex h-7 items-center justify-center rounded-md border text-xs font-medium transition-colors cursor-pointer disabled:cursor-not-allowed",
+                    priority === value
+                      ? activeClass
+                      : "border-border bg-card hover:bg-muted text-muted-foreground",
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
           </div>
 
@@ -223,16 +301,34 @@ export function TodoItem({ todo, isBusy, onToggle, onUpdate, onDelete }: TodoIte
       />
 
       <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1.5">
           <label
             htmlFor={checkboxId}
             className={cn(
-              "cursor-pointer text-base leading-snug font-medium break-words",
+              "cursor-pointer text-base leading-snug font-medium break-words mr-1",
               todo.completed && "text-muted-foreground line-through",
             )}
           >
             {todo.title}
           </label>
+
+          {/* Category Badge */}
+          {todo.category && (
+            <span
+              className={cn(
+                "inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium border",
+                todo.completed && "opacity-60",
+              )}
+              style={{
+                borderColor: `${todo.category.color}40`,
+                backgroundColor: `${todo.category.color}15`,
+                color: todo.category.color,
+              }}
+            >
+              <Folder className="size-3" />
+              {todo.category.name}
+            </span>
+          )}
 
           {/* Priority Badge */}
           {todo.priority && (
@@ -270,6 +366,23 @@ export function TodoItem({ todo, isBusy, onToggle, onUpdate, onDelete }: TodoIte
             </>
           )}
         </div>
+
+        {/* Tags list */}
+        {todo.tags && todo.tags.length > 0 && (
+          <div className="mt-1.5 flex flex-wrap gap-1">
+            {todo.tags.map((t) => (
+              <span
+                key={t.id}
+                className={cn(
+                  "inline-flex items-center rounded-sm bg-muted px-1.5 py-0.2 text-[11px] font-medium text-muted-foreground",
+                  todo.completed && "line-through opacity-60",
+                )}
+              >
+                #{t.name}
+              </span>
+            ))}
+          </div>
+        )}
 
         {todo.description && (
           <p

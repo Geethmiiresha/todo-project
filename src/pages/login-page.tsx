@@ -73,14 +73,26 @@ export default function LoginPage() {
           onValueChange={setEmail}
           error={errors.email}
         />
-        <FormField
-          label="Password"
-          type="password"
-          autoComplete="current-password"
-          value={password}
-          onValueChange={setPassword}
-          error={errors.password}
-        />
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-sm font-medium">Password</span>
+            <Link
+              to="/forgot-password"
+              className="text-xs text-primary underline-offset-4 hover:underline"
+            >
+              Forgot password?
+            </Link>
+          </div>
+          <FormField
+            label=""
+            type="password"
+            aria-label="Password"
+            autoComplete="current-password"
+            value={password}
+            onValueChange={setPassword}
+            error={errors.password}
+          />
+        </div>
 
         {formError && (
           <p

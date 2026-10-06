@@ -1,9 +1,13 @@
 import { EmptyState } from "@/components/empty-state"
 import { TodoItem } from "@/components/todo-item"
+import type { Category } from "@/types/category"
+import type { Tag } from "@/types/tag"
 import type { Todo, TodoDraft, TodoFilter } from "@/types/todo"
 
 interface TodoListProps {
   todos: Todo[]
+  categories?: Category[]
+  tags?: Tag[]
   filter: TodoFilter
   search?: string
   hasAnyTodos: boolean
@@ -23,6 +27,8 @@ function emptyMessage(filter: TodoFilter, hasAnyTodos: boolean, search?: string)
 
 export function TodoList({
   todos,
+  categories = [],
+  tags = [],
   filter,
   search,
   hasAnyTodos,
@@ -41,6 +47,8 @@ export function TodoList({
         <li key={todo.id}>
           <TodoItem
             todo={todo}
+            categories={categories}
+            tags={tags}
             isBusy={busyIds.has(todo.id)}
             onToggle={onToggle}
             onUpdate={onUpdate}

@@ -16,6 +16,8 @@ export const todoApi = {
     if (params?.search && params.search.trim()) query.set("search", params.search.trim())
     if (params?.status && params.status !== "all") query.set("status", params.status)
     if (params?.priority) query.set("priority", params.priority)
+    if (params?.categoryId) query.set("categoryId", params.categoryId)
+    if (params?.tagId) query.set("tagId", params.tagId)
     if (params?.sortBy) query.set("sortBy", params.sortBy)
     if (params?.sortOrder) query.set("sortOrder", params.sortOrder)
 

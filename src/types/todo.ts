@@ -1,3 +1,6 @@
+import type { Category } from "./category"
+import type { Tag } from "./tag"
+
 export type TodoPriority = "LOW" | "MEDIUM" | "HIGH"
 
 export interface Todo {
@@ -7,6 +10,9 @@ export interface Todo {
   completed: boolean
   priority: TodoPriority
   dueDate: string | null
+  categoryId?: string | null
+  category?: Category | null
+  tags?: Tag[]
   createdAt?: string
   updatedAt?: string
 }
@@ -17,6 +23,8 @@ export interface TodoDraft {
   description?: string
   priority?: TodoPriority
   dueDate?: string | null
+  categoryId?: string | null
+  tagIds?: string[]
 }
 
 export type TodoFilter = "all" | "active" | "completed"
@@ -37,6 +45,8 @@ export interface TodoQueryParams {
   search?: string
   status?: TodoFilter
   priority?: TodoPriority
+  categoryId?: string
+  tagId?: string
   sortBy?: TodoSortBy
   sortOrder?: SortOrder
 }
